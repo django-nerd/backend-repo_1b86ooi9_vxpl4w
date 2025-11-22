@@ -12,37 +12,54 @@ Model name is converted to lowercase for the collection name:
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 
-# Example schemas (replace with your own):
+# Customers, Orders, and Order Items for transactional CRUD
 
+class Customer(BaseModel):
+    """
+    Customers collection schema
+    Collection name: "customer"
+    """
+    name: str = Field(..., description="Customer full name")
+    email: str = Field(..., description="Unique email")
+    phone: Optional[str] = Field(None, description="Phone number")
+    address: Optional[str] = Field(None, description="Mailing address")
+    note: Optional[str] = Field(None, description="Internal note")
+
+class OrderItem(BaseModel):
+    """Embedded schema for items inside an order"""
+    name: str = Field(..., description="Item name/description")
+    quantity: int = Field(..., ge=1, description="Quantity of the item")
+    unit_price: float = Field(..., ge=0, description="Unit price")
+    discount_percent: float = Field(0, ge=0, le=100, description="Discount percent applied to this item (0-100)")
+
+class Order(BaseModel):
+    """
+    Orders collection schema
+    Collection name: "order"
+    """
+    customer_id: str = Field(..., description="Reference to customer _id as string")
+    status: str = Field("Pending", description="Order status: Pending, Paid, Shipped, Cancelled")
+    order_discount_percent: float = Field(0, ge=0, le=100, description="Discount percent applied to whole order")
+    items: List[OrderItem] = Field(default_factory=list, description="List of order items")
+    subtotal: float = Field(0, ge=0, description="Calculated subtotal before order-level discount")
+    discount_total: float = Field(0, ge=0, description="Total discount amount (items + order)")
+    total: float = Field(0, ge=0, description="Final order total after discounts")
+
+# Example schemas retained (not used by app but kept for reference)
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    name: str
+    email: str
+    address: str
+    age: Optional[int] = None
+    is_active: bool = True
 
 class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    title: str
+    description: Optional[str] = None
+    price: float
+    category: str
+    in_stock: bool = True
 
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+# The Flames database viewer can read these schemas via /schema endpoint
